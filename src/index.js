@@ -20,12 +20,18 @@ try {
 
 const token = process.env.TELEGRAM_BOT_TOKEN;
 if (!token) {
-  console.error("TELEGRAM_BOT_TOKEN is required. Set it in .env or as environment variable.");
+  console.error("TELEGRAM_BOT_TOKEN is required.\n");
+  console.error("Quick setup:  npm run setup");
+  console.error("Manual setup: cp .env.example .env  (then edit .env with your tokens)\n");
+  console.error("Get a bot token from @BotFather on Telegram.");
   process.exit(1);
 }
 
 if (!process.env.ANTHROPIC_API_KEY) {
-  console.error("ANTHROPIC_API_KEY is required. Set it in .env or as environment variable.");
+  console.error("ANTHROPIC_API_KEY is required.\n");
+  console.error("Quick setup:  npm run setup");
+  console.error("Manual setup: cp .env.example .env  (then edit .env with your tokens)\n");
+  console.error("Get an API key from https://console.anthropic.com");
   process.exit(1);
 }
 

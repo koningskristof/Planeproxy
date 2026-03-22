@@ -24,6 +24,14 @@ Telegram proxy server waarmee je Claude AI kunt gebruiken en websites kunt ophal
 
 ### 3. Configuratie
 
+**Automatisch (aanbevolen):**
+
+```bash
+npm run setup
+```
+
+**Of handmatig:**
+
 ```bash
 cp .env.example .env
 ```
