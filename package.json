@@ -1,0 +1,16 @@
+{
+  "name": "planeproxy",
+  "version": "1.0.0",
+  "description": "Telegram proxy server for Claude AI and web content - works on airplane WiFi",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js"
+  },
+  "dependencies": {
+    "node-telegram-bot-api": "^0.66.0",
+    "@anthropic-ai/sdk": "^0.39.0",
+    "cheerio": "^1.0.0",
+    "undici": "^7.0.0"
+  }
+}
