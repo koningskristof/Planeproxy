@@ -1,7 +1,24 @@
-const { request } = require("undici");
 const cheerio = require("cheerio");
 
 const MAX_TEXT_LENGTH = 4000;
+const MAX_REDIRECTS = 5;
+
+async function fetchWithRedirects(url) {
+  for (let i = 0; i < MAX_REDIRECTS; i++) {
+    const response = await fetch(url, {
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.5",
+      },
+      redirect: "follow",
+      signal: AbortSignal.timeout(15000),
+    });
+    return response;
+  }
+  throw new Error("Te veel redirects");
+}
 
 async function fetchWebContent(url) {
   // Normalize URL
@@ -9,20 +26,10 @@ async function fetchWebContent(url) {
     url = "https://" + url;
   }
 
-  const response = await request(url, {
-    headers: {
-      "User-Agent":
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-      Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-      "Accept-Language": "en-US,en;q=0.5",
-    },
-    maxRedirections: 5,
-    headersTimeout: 15000,
-    bodyTimeout: 15000,
-  });
+  const response = await fetchWithRedirects(url);
 
-  const contentType = response.headers["content-type"] || "";
-  const body = await response.body.text();
+  const contentType = response.headers.get("content-type") || "";
+  const body = await response.text();
 
   // If it's JSON, return formatted JSON
   if (contentType.includes("application/json")) {
