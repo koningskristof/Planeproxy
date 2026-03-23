@@ -1,6 +1,6 @@
 const cheerio = require("cheerio");
 
-const MAX_TEXT_LENGTH = 4000;
+const MAX_TEXT_LENGTH = 10000;
 const MAX_REDIRECTS = 5;
 
 async function fetchWithRedirects(url) {
@@ -71,32 +71,72 @@ async function fetchWebContent(url) {
     contentEl = $("body");
   }
 
-  // Extract text with some structure
-  const lines = [];
-  if (title) lines.push(`Title: ${title}\n`);
-
-  contentEl.find("h1, h2, h3, h4, h5, h6, p, li, td, th, blockquote, pre, code").each((_, el) => {
-    const tag = el.tagName;
-    let text = $(el).text().trim().replace(/\s+/g, " ");
-    if (!text) return;
-
-    if (tag.startsWith("h")) {
-      const level = parseInt(tag[1]);
-      text = "#".repeat(level) + " " + text;
-    } else if (tag === "li") {
-      text = "- " + text;
-    } else if (tag === "blockquote") {
-      text = "> " + text;
-    } else if (tag === "pre" || tag === "code") {
-      text = "```\n" + text + "\n```";
+  // Resolve relative URLs to absolute
+  const baseUrl = new URL(url);
+  function resolveUrl(href) {
+    if (!href) return null;
+    try {
+      return new URL(href, baseUrl).href;
+    } catch {
+      return null;
     }
+  }
 
-    lines.push(text);
+  // Extract text with links
+  const lines = [];
+  if (title) lines.push(`📰 *${title}*\n`);
+
+  // For news sites, prioritize extracting article links
+  const seenLinks = new Set();
+  contentEl.find("a").each((_, el) => {
+    const $el = $(el);
+    const href = resolveUrl($el.attr("href"));
+    const text = $el.text().trim().replace(/\s+/g, " ");
+    if (!text || text.length < 10 || !href) return;
+    // Skip non-article links (anchors, javascript, social media share, etc.)
+    if (href.startsWith("javascript:") || href.includes("#") && href.split("#")[0] === url) return;
+    if (seenLinks.has(href)) return;
+    seenLinks.add(href);
+
+    // Find time/date info near the link
+    const parent = $el.closest("li, article, div");
+    const timeEl = parent.find("time").first();
+    const timeText = timeEl.length ? ` (${timeEl.text().trim()})` : "";
+
+    lines.push(`• ${text}${timeText}\n  🔗 ${href}\n`);
   });
+
+  // If no links found, fall back to text extraction
+  if (lines.length <= 1) {
+    contentEl.find("h1, h2, h3, h4, h5, h6, p, li, blockquote").each((_, el) => {
+      const tag = el.tagName;
+      const $el = $(el);
+      let text = $el.text().trim().replace(/\s+/g, " ");
+      if (!text) return;
+
+      // Check for a link inside this element
+      const link = $el.find("a").first();
+      const href = resolveUrl(link.attr("href"));
+
+      if (tag.startsWith("h")) {
+        const level = parseInt(tag[1]);
+        text = "#".repeat(level) + " " + text;
+      } else if (tag === "li") {
+        text = "- " + text;
+      } else if (tag === "blockquote") {
+        text = "> " + text;
+      }
+
+      if (href && !href.startsWith("javascript:")) {
+        text += `\n  🔗 ${href}`;
+      }
+
+      lines.push(text);
+    });
+  }
 
   let result = lines.join("\n");
   if (!result.trim()) {
-    // Fallback: just get all text
     result = contentEl.text().replace(/\s+/g, " ").trim();
     if (title) result = `Title: ${title}\n\n${result}`;
   }
