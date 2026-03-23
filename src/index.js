@@ -39,7 +39,8 @@ console.log("PlaneProxy is running! Waiting for Telegram messages...");
 
 // Auth check
 function isAllowed(userId) {
-  return allowedUsers.length === 0 || allowedUsers.includes(userId);
+  if (allowedUsers.length === 0) return false;
+  return allowedUsers.includes(userId);
 }
 
 // Send long messages in chunks (Telegram has a 4096 char limit)
