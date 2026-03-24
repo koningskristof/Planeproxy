@@ -82,56 +82,46 @@ async function fetchWebContent(url) {
     }
   }
 
-  // Extract text with links
+  // Extract text content
   const lines = [];
   if (title) lines.push(`📰 *${title}*\n`);
 
-  // For news sites, prioritize extracting article links
-  const seenLinks = new Set();
-  contentEl.find("a").each((_, el) => {
+  // First: extract article text (headings, paragraphs, lists, quotes)
+  contentEl.find("h1, h2, h3, h4, h5, h6, p, li, blockquote").each((_, el) => {
+    const tag = el.tagName;
     const $el = $(el);
-    const href = resolveUrl($el.attr("href"));
-    const text = $el.text().trim().replace(/\s+/g, " ");
-    if (!text || text.length < 10 || !href) return;
-    // Skip non-article links (anchors, javascript, social media share, etc.)
-    if (href.startsWith("javascript:") || href.includes("#") && href.split("#")[0] === url) return;
-    if (seenLinks.has(href)) return;
-    seenLinks.add(href);
+    let text = $el.text().trim().replace(/\s+/g, " ");
+    if (!text) return;
 
-    // Find time/date info near the link
-    const parent = $el.closest("li, article, div");
-    const timeEl = parent.find("time").first();
-    const timeText = timeEl.length ? ` (${timeEl.text().trim()})` : "";
+    if (tag.startsWith("h")) {
+      const level = parseInt(tag[1]);
+      text = "#".repeat(level) + " " + text;
+    } else if (tag === "li") {
+      text = "- " + text;
+    } else if (tag === "blockquote") {
+      text = "> " + text;
+    }
 
-    lines.push(`• ${text}${timeText}\n  🔗 ${href}\n`);
+    lines.push(text);
   });
 
-  // If no links found, fall back to text extraction
+  // Fallback: if no text content found, extract links (useful for index/overview pages)
   if (lines.length <= 1) {
-    contentEl.find("h1, h2, h3, h4, h5, h6, p, li, blockquote").each((_, el) => {
-      const tag = el.tagName;
+    const seenLinks = new Set();
+    contentEl.find("a").each((_, el) => {
       const $el = $(el);
-      let text = $el.text().trim().replace(/\s+/g, " ");
-      if (!text) return;
+      const href = resolveUrl($el.attr("href"));
+      const text = $el.text().trim().replace(/\s+/g, " ");
+      if (!text || text.length < 10 || !href) return;
+      if (href.startsWith("javascript:") || href.includes("#") && href.split("#")[0] === url) return;
+      if (seenLinks.has(href)) return;
+      seenLinks.add(href);
 
-      // Check for a link inside this element
-      const link = $el.find("a").first();
-      const href = resolveUrl(link.attr("href"));
+      const parent = $el.closest("li, article, div");
+      const timeEl = parent.find("time").first();
+      const timeText = timeEl.length ? ` (${timeEl.text().trim()})` : "";
 
-      if (tag.startsWith("h")) {
-        const level = parseInt(tag[1]);
-        text = "#".repeat(level) + " " + text;
-      } else if (tag === "li") {
-        text = "- " + text;
-      } else if (tag === "blockquote") {
-        text = "> " + text;
-      }
-
-      if (href && !href.startsWith("javascript:")) {
-        text += `\n  🔗 ${href}`;
-      }
-
-      lines.push(text);
+      lines.push(`• ${text}${timeText}\n  🔗 ${href}\n`);
     });
   }
 
