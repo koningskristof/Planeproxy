@@ -1,6 +1,7 @@
 const TelegramBot = require("node-telegram-bot-api");
 const { askClaude, clearHistory } = require("./claude-client");
 const { fetchWebContent } = require("./web-scraper");
+const { searchDuckDuckGo, formatResults } = require("./search");
 
 // Load .env if present
 try {
@@ -79,11 +80,13 @@ Ik ben je AI-assistent die werkt via Telegram — perfect voor in het vliegtuig.
 *Commando's:*
 - Stuur gewoon een bericht → ik beantwoord het via Claude AI
 - \`/fetch URL\` → haal de tekst van een website op
+- \`/search query\` → zoek op het internet via DuckDuckGo
 - \`/summarize URL\` → haal een website op en vat deze samen
 - \`/clear\` → wis de gespreksgeschiedenis
 - \`/help\` → toon dit bericht
 
 *Voorbeeld:*
+\`/search weer Brussel vandaag\`
 \`/fetch wikipedia.org/wiki/Amsterdam\`
 \`/summarize nos.nl\`
 Of stel gewoon een vraag!`,
@@ -99,6 +102,7 @@ bot.onText(/\/help/, (msg) => {
     `*PlaneProxy Commando's:*
 
 📨 *Gewoon bericht* — Stel een vraag aan Claude AI
+🔍 \`/search query\` — Zoek op internet via DuckDuckGo
 🌐 \`/fetch URL\` — Haal website-inhoud op als tekst
 📝 \`/summarize URL\` — Haal website op + samenvatting door Claude
 🗑 \`/clear\` — Wis gespreksgeschiedenis
@@ -124,6 +128,22 @@ bot.onText(/\/clear/, (msg) => {
   if (!isAllowed(msg.from.id)) return;
   clearHistory(msg.from.id);
   bot.sendMessage(msg.chat.id, "Gespreksgeschiedenis gewist.");
+});
+
+// /search command - search via DuckDuckGo
+bot.onText(/\/search\s+(.+)/, async (msg, match) => {
+  if (!isAllowed(msg.from.id)) return;
+  const query = match[1].trim();
+  const chatId = msg.chat.id;
+
+  bot.sendChatAction(chatId, "typing");
+
+  try {
+    const results = await searchDuckDuckGo(query);
+    await sendLong(chatId, formatResults(query, results));
+  } catch (err) {
+    bot.sendMessage(chatId, `Zoeken mislukt: ${err.message}`);
+  }
 });
 
 // /fetch command - fetch website content
