@@ -176,7 +176,8 @@ bot.onText(/\/summarize\s+(.+)/, async (msg, match) => {
     bot.sendChatAction(chatId, "typing");
     const summary = await askClaude(
       userId,
-      `Hier is de inhoud van ${url}:\n\n${content}\n\nGeef een beknopte samenvatting van deze pagina.`
+      `Hier is de inhoud van ${url}:\n\n${content}\n\nGeef een beknopte samenvatting van deze pagina.`,
+      (status) => bot.sendMessage(chatId, status)
     );
     await sendLong(chatId, summary);
   } catch (err) {
@@ -197,7 +198,10 @@ bot.on("message", async (msg) => {
   bot.sendChatAction(chatId, "typing");
 
   try {
-    const reply = await askClaude(userId, msg.text);
+    const reply = await askClaude(userId, msg.text, (status) => {
+      bot.sendMessage(chatId, status);
+      bot.sendChatAction(chatId, "typing");
+    });
     await sendLong(chatId, reply);
   } catch (err) {
     console.error("Claude error:", err);
