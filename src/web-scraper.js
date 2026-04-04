@@ -86,7 +86,7 @@ async function fetchWebContent(url) {
   const lines = [];
   if (title) lines.push(`📰 *${title}*\n`);
 
-  // First: extract article text (headings, paragraphs, lists, quotes)
+  // Extract article text (headings, paragraphs, lists, quotes)
   contentEl.find("h1, h2, h3, h4, h5, h6, p, li, blockquote").each((_, el) => {
     const tag = el.tagName;
     const $el = $(el);
@@ -105,24 +105,28 @@ async function fetchWebContent(url) {
     lines.push(text);
   });
 
-  // Fallback: if no text content found, extract links (useful for index/overview pages)
-  if (lines.length <= 1) {
-    const seenLinks = new Set();
-    contentEl.find("a").each((_, el) => {
-      const $el = $(el);
-      const href = resolveUrl($el.attr("href"));
-      const text = $el.text().trim().replace(/\s+/g, " ");
-      if (!text || text.length < 10 || !href) return;
-      if (href.startsWith("javascript:") || href.includes("#") && href.split("#")[0] === url) return;
-      if (seenLinks.has(href)) return;
-      seenLinks.add(href);
+  // Also extract links (always, after text content)
+  const linkLines = [];
+  const seenLinks = new Set();
+  contentEl.find("a").each((_, el) => {
+    const $el = $(el);
+    const href = resolveUrl($el.attr("href"));
+    const text = $el.text().trim().replace(/\s+/g, " ");
+    if (!text || text.length < 10 || !href) return;
+    if (href.startsWith("javascript:") || href.includes("#") && href.split("#")[0] === url) return;
+    if (seenLinks.has(href)) return;
+    seenLinks.add(href);
 
-      const parent = $el.closest("li, article, div");
-      const timeEl = parent.find("time").first();
-      const timeText = timeEl.length ? ` (${timeEl.text().trim()})` : "";
+    const parent = $el.closest("li, article, div");
+    const timeEl = parent.find("time").first();
+    const timeText = timeEl.length ? ` (${timeEl.text().trim()})` : "";
 
-      lines.push(`• ${text}${timeText}\n  🔗 ${href}\n`);
-    });
+    linkLines.push(`• ${text}${timeText}\n  🔗 ${href}`);
+  });
+
+  if (linkLines.length > 0) {
+    lines.push("\n---\n🔗 *Links:*\n");
+    lines.push(...linkLines);
   }
 
   let result = lines.join("\n");
